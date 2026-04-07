@@ -1,0 +1,41 @@
+services:
+  rca-gateway:
+    build:
+      context: .
+      dockerfile: services/rca-gateway/Dockerfile
+    container_name: rca-gateway
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - LOG_FILTER_SEVERITY=${LOG_FILTER_SEVERITY}
+      - RCA_OUTPUT_FORMAT=${RCA_OUTPUT_FORMAT}
+      - RCA_MODE=${RCA_MODE}
+    ports:
+      - "7000:7000"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    volumes:
+      - ./ops/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/configs/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/lab2-logs-rca.json
+    volumes:
+      - ./ops/configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
